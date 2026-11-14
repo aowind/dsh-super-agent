@@ -1,0 +1,43 @@
+name: Feature request
+description: A new source, a delivery mode, a policy knob or a console view.
+title: "[feat] "
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - sources (inbox / GitHub / webhook / other IM)
+        - admission policy
+        - Router / dispatch strategy
+        - Worker execution
+        - worktree / repository handling
+        - delivery (patch / push / PR / reply / notification)
+        - console / visualization
+        - unattended operations (budget, restart, cleanup)
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is painful today? Concrete scenario beats an abstract wish.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: What should happen instead, and which config key would switch it on?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: This can be validated offline (a selftest can cover it).
+        - label: This needs a live DSH session or a real repository to verify.

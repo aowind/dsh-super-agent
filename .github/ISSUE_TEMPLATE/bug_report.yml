@@ -1,0 +1,72 @@
+name: Bug report
+description: Something in the Router/Worker flow, admission, delivery or the console is wrong.
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Please keep secrets (tokens, private repo URLs, absolute home paths) out of the report.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the system misbehaved?
+      options:
+        - console / UI
+        - admission (fast path or semantic gate)
+        - Router / dispatch
+        - Worker session / DSH integration
+        - worktree isolation
+        - delivery (commit / patch / push / PR / reply)
+        - sources (inbox / GitHub / webhook)
+        - watchdog / budget / cleanup
+        - docs / install
+    validations:
+      required: true
+  - type: input
+    id: dsh
+    attributes:
+      label: DSH version and OS
+      placeholder: "DSH 1.x.x / Windows 11 / Node 24"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Actual behaviour, including the console event line or the error text if you have it.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Config keys involved (redact tokens), trigger text, repo shape. `superagent action=status` output helps.
+      placeholder: |
+        1. acceptMode = accept, acceptSources = ["inbox"]
+        2. drop {text, repo} into the inbox directory
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / state
+      description: Relevant lines from `GET /api/super-agent/state` (events, workers, watchdog) or DSH logs.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I removed tokens, secrets and private paths from this report.
+          required: true
+        - label: I searched existing issues first.
+          required: true

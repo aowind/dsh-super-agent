@@ -1,5 +1,9 @@
 # Super Agent for DeepSeek Harness
 
+[![ci](https://github.com/aowind/dsh-super-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/aowind/dsh-super-agent/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![node](https://img.shields.io/badge/node-%E2%89%A522.19-339933)](package.json)
+
 > Router 分派、Worker 隔离执行、两级触发器准入、线程订阅直通、外部看门狗、注意力闸门 —— 把 DeepSeek Harness 团队公开的 **Super-agent** 架构落到你自己的 DSH 上，并带一个实时架构控制台。
 
 这是 DeepSeek Harness（DSH）的一个 **bundle**：Host 半是控制面，Client 半是左侧栏里那个可视化控制台。默认只观察、不执行；确认行为可靠后再切到自主模式。
@@ -137,6 +141,31 @@ node lib/delivery/selftest.mjs       # 56/56（真实 git + bare remote）
 - **真开 GitHub PR、以及给 GitHub 轮询配稳定额度，需要一个有 `repo` 权限的 token**；无 token 时交付走 patch + PR 草稿（不需要任何凭据），轮询按匿名额度（60 次/小时）。
 - Worker 用的是会话内置 preset（`standard`），`ptc` 等带代码执行运行时的 preset 在裸会话下可能报错，已默认避开。
 - 「无人值守」的最后一步验收仍需人：默认不自动合并，patch/PR 交给人看。
+
+## 开发
+
+```bash
+git clone https://github.com/aowind/dsh-super-agent.git
+cd dsh-super-agent
+npm test                                   # engine 14 · worktree 6 · sources 13 · reply 9 · delivery 56
+node scripts/verify-github-source.mjs      # 真网轮询一个公开仓库（无 token，约 9 个请求）
+```
+
+CI（GitHub Actions）在 Node 22 / 24 上跑语法检查、五套离线断言和 bundle 清单校验，见 [.github/workflows/ci.yml](.github/workflows/ci.yml)。
+
+- [CONTRIBUTING.md](CONTRIBUTING.md)：代码分区、离线断言纪律、本地装载方式
+- [SECURITY.md](SECURITY.md)：权限模型与漏洞报告流程（请走私密 advisory）
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)、[CHANGELOG.md](CHANGELOG.md)
+
+## 发布
+
+如果 `github.com:443` 不可达、只有 `api.github.com` 可用（或不想配 git remote），可以用内置发布器把工作树提交成一次 commit：
+
+```bash
+GITHUB_TOKEN=ghp_xxx node tools/publish-github.mjs --owner aowind --repo dsh-super-agent --tag v0.2.1
+```
+
+它走 Git Data API（blobs → tree → commit → ref + annotated tag），token 只读环境变量、不落盘。
 
 ## 许可
 
