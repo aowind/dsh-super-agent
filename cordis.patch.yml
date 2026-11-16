@@ -9,7 +9,7 @@
 # recorded, not executed. Set `accept` only after reading the observe log for a while.
 - insert:
     - id: dsh-super-agent
-      name: '@local/dsh-super-agent'
+      name: 'dsh-super-agent'
       config:
         acceptMode: observe
         runner: auto
@@ -53,7 +53,7 @@
           ci:
             secret: ''
     - id: dsh-super-agent.demo
-      name: '@local/dsh-super-agent'
+      name: 'dsh-super-agent'
       disabled: true
       config:
         acceptMode: observe
