@@ -11,7 +11,7 @@
  */
 
 window.__ModuleLoader__.load({
-  id: '@local/dsh-super-agent',
+  id: 'dsh-super-agent',
   factory(require) {
     const React = require('react')
     const h = React.createElement
