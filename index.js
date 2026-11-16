@@ -140,21 +140,35 @@ export async function apply(ctx, rawConfig = {}) {
       : undefined,
   }
 
-  /** Resolves the provider/model pair this deployment uses for a role. */
+  /** The route each role last resolved to, shared with the engine so the console can show the
+   * model a role actually runs on instead of the `profile-default` placeholder. */
+  const resolvedModels = { router: null, worker: null }
+
+  /** The catalog's own name for a model, the same words the model picker shows. */
+  function catalogName(catalog, route) {
+    const group = catalog?.groups?.find(entry => entry.id === route.provider)
+    return group?.models?.find(model => model.id === route.model)?.name ?? ''
+  }
+
+  /** Resolves the provider/model pair (and the catalog's name for it) this deployment uses for a role. */
   async function modelFor(role) {
     const configured = String((role === 'router' ? config.routerModel : config.workerModel) || '').trim()
+    const catalog = await ctx.sessionController.modelCatalog().catch(() => null)
+    let route = null
     if (configured.includes('/')) {
       const [provider, ...rest] = configured.split('/')
-      return { provider, model: rest.join('/') }
-    }
-    try {
-      const catalog = await ctx.sessionController.modelCatalog()
-      if (catalog?.default?.provider && catalog?.default?.model) {
-        if (configured === '') return { provider: catalog.default.provider, model: catalog.default.model }
-        return { provider: catalog.default.provider, model: configured }
+      route = { provider, model: rest.join('/') }
+    } else if (catalog?.default?.provider && catalog?.default?.model) {
+      route = {
+        provider: catalog.default.provider,
+        model: configured === '' ? catalog.default.model : configured,
       }
-    } catch { /* a catalog failure only means "no model", never a crash */ }
-    return null
+    }
+    if (!route) return null
+    const name = catalogName(catalog, route)
+    const resolved = { ...route, ...(name === '' ? {} : { name }) }
+    resolvedModels[role] = resolved
+    return resolved
   }
 
   /**
@@ -172,7 +186,10 @@ export async function apply(ctx, rawConfig = {}) {
     if (!route) return null
     if (model && model.includes('/')) {
       const [provider, ...rest] = model.split('/')
-      route = { provider, model: rest.join('/') }
+      const previous = resolvedModels.router
+      const same = previous?.provider === provider && previous?.model === rest.join('/')
+      route = { provider, model: rest.join('/'), ...(same && previous?.name ? { name: previous.name } : {}) }
+      resolvedModels.router = route
     }
     const system = [
       policy,
@@ -519,6 +536,7 @@ export async function apply(ctx, rawConfig = {}) {
   }
 
   const engine = new SuperAgentEngine({
+    resolvedModels,
     config: {
       acceptMode: config.acceptMode,
       runner: config.runner,
@@ -543,6 +561,11 @@ export async function apply(ctx, rawConfig = {}) {
   })
   store.onError = error => ctx.logger?.warn?.(`[super-agent] state save failed: ${String(error?.message ?? error)}`)
   await engine.start()
+  // Resolve both roles once at startup so the console names the real model before the first
+  // decision; a failure here only leaves the placeholder in place.
+  for (const role of ['router', 'worker']) {
+    void modelFor(role).catch(() => {})
+  }
   if (worktrees) {
     try { await worktrees.prune() } catch (error) { log('warn', 'worktree registry prune failed', error) }
   }

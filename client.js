@@ -87,7 +87,7 @@ window.__ModuleLoader__.load({
       subtitle: 'Router / Worker 双层自主体系的实时架构与注意力控制台',
       'conn.online': '在线', 'conn.offline': '离线', 'conn.loading': '加载中',
       'status.mode': '模式', 'status.health': '健康', 'status.uptime': '运行时长',
-      'status.runner': 'Runner', 'status.model': '当前模型', 'status.updated': '上次同步',
+      'status.runner': 'Runner', 'status.model': '当前模型', 'status.modelName': '模型名称', 'status.updated': '上次同步',
       'status.paused': '已暂停', 'status.active': '运行中', 'status.waiting': '等待 Host 状态数据…',
       'mode.observe': '观察', 'mode.accept': '主动',
       'runner.session': '真实会话', 'runner.simulate': '模拟',
@@ -161,7 +161,7 @@ window.__ModuleLoader__.load({
       subtitle: 'Live architecture and attention console for the Router / Worker two-layer system',
       'conn.online': 'Online', 'conn.offline': 'Offline', 'conn.loading': 'Loading',
       'status.mode': 'Mode', 'status.health': 'Health', 'status.uptime': 'Uptime',
-      'status.runner': 'Runner', 'status.model': 'Model', 'status.updated': 'Synced',
+      'status.runner': 'Runner', 'status.model': 'Model', 'status.modelName': 'Model name', 'status.updated': 'Synced',
       'status.paused': 'Paused', 'status.active': 'Active', 'status.waiting': 'Waiting for Host state…',
       'mode.observe': 'Observe', 'mode.accept': 'Accept',
       'runner.session': 'Live session', 'runner.simulate': 'Simulated',
@@ -759,6 +759,8 @@ window.__ModuleLoader__.load({
           staleAfterMs: Math.max(0, intOr(config.staleAfterMs, 0)),
           routerModel: strOr(config.routerModel, ''),
           workerModel: strOr(config.workerModel, ''),
+          routerModelResolved: strOr(config.routerModelResolved, ''),
+          workerModelResolved: strOr(config.workerModelResolved, ''),
         },
         health: {
           state: pick(health.state, HEALTH_STATES, 'ready'),
@@ -771,6 +773,7 @@ window.__ModuleLoader__.load({
           avgDecisionMs: Math.max(0, numOr(router.avgDecisionMs, 0)),
           lastDecisionAt: numOr(router.lastDecisionAt, 0),
           model: strOr(router.model, ''),
+          modelName: strOr(router.modelName, ''),
           semanticCalls: Math.max(0, intOr(router.semanticCalls, 0)),
           semanticFailures: Math.max(0, intOr(router.semanticFailures, 0)),
         },
@@ -1207,8 +1210,9 @@ window.__ModuleLoader__.load({
         h(BlockBoundary, { t }, children))
     }
 
-    function StatusChip({ label, value, color }) {
-      const titleText = typeof value === 'string' || typeof value === 'number' ? label + ': ' + value : label
+    function StatusChip({ label, value, color, title }) {
+      const titleText = typeof title === 'string' && title !== '' ? title
+        : typeof value === 'string' || typeof value === 'number' ? label + ': ' + value : label
       return h('span', { style: styles.chip, title: titleText },
         h('span', { style: styles.chipLabel }, label),
         h('span', { style: color === undefined ? styles.chipValue : { ...styles.chipValue, color } }, value))
@@ -1583,6 +1587,7 @@ window.__ModuleLoader__.load({
 
       const admissionText = String(admission.received) + ' → ' + String(admission.dispatched)
       const routerModel = strOr(router.model, '') === '' ? t('common.none') : router.model
+      const routerModelName = strOr(router.modelName, '')
 
       const svgChildren = []
       svgChildren.push(h('text', { key: 'cap-router', x: routerBox.x + routerBox.w / 2, y: 22, textAnchor: 'middle', style: { fill: TOK.caption, opacity: 0.75, fontSize: 9.5, letterSpacing: '0.08em' } }, t('topo.router')))
@@ -1603,7 +1608,8 @@ window.__ModuleLoader__.load({
 
       // Router
       svgChildren.push(h('g', { key: 'router' },
-        h('title', null, t('topo.router') + ' · ' + routerModel + '\n'
+        h('title', null, t('topo.router') + ' · '
+          + (routerModelName !== '' ? routerModelName + ' · ' : '') + routerModel + '\n'
           + t('topo.decisions') + ' ' + String(router.decisions) + ' · ' + t('topo.batch') + ' ' + formatRatio(router.avgBatch)),
         h('rect', {
           x: routerBox.x, y: routerBox.y, width: routerBox.w, height: routerBox.h, rx: 12,
@@ -2148,9 +2154,17 @@ window.__ModuleLoader__.load({
         : connection === 'offline' ? t('conn.offline') : t('conn.loading')
       const connectionColor = connection === 'online' ? TOK.success
         : connection === 'offline' ? TOK.error : TOK.warn
-      const model = data === null ? t('common.none')
-        : data.config.workerModel !== '' ? data.config.workerModel
-          : data.router.model !== '' ? data.router.model : t('common.none')
+      // Two chips on purpose: the model chip carries the whole path the request runs on
+      // (provider/model), and the name chip carries the picker's own words. Collapsing them to
+      // one string loses either the provider or the name, and "which model is this, really" is
+      // the question this header exists to answer.
+      const modelPath = data === null ? t('common.none')
+        : strOr(data.router.model, '') !== '' ? data.router.model
+          : strOr(data.config.workerModelResolved, '') !== '' ? data.config.workerModelResolved
+            : strOr(data.config.routerModelResolved, '') !== '' ? data.config.routerModelResolved
+              : data.config.workerModel !== '' ? data.config.workerModel : t('common.none')
+      const modelName = data === null ? '' : strOr(data.router.modelName, '')
+      const modelTitle = modelName !== '' && modelPath !== '' ? modelName + ' · ' + modelPath : modelPath
 
       const chips = []
       chips.push(h(React.Fragment, { key: 'conn' },
@@ -2181,7 +2195,15 @@ window.__ModuleLoader__.load({
           label: t('status.runner'),
           value: data.mode.runner === 'session' ? t('runner.session') : t('runner.simulate'),
         }))
-        chips.push(h(StatusChip, { key: 'model', label: t('status.model'), value: clipText(model, 32) }))
+        chips.push(h(StatusChip, { key: 'model', label: t('status.model'), value: clipText(modelPath, 44), title: modelTitle }))
+        if (modelName !== '') {
+          chips.push(h(StatusChip, {
+            key: 'model-name',
+            label: t('status.modelName'),
+            value: clipText(modelName, 32),
+            title: modelName + (modelPath !== '' ? ' · ' + modelPath : ''),
+          }))
+        }
         if (snapshot.updatedAt > 0) {
           chips.push(h(StatusChip, {
             key: 'updated',
