@@ -45,7 +45,7 @@
 
 ## 4. 安装与运行态
 
-- 安装：`plugin_manager install_bundle` → `application: applied`（bundles 记录 `@local/dsh-super-agent@0.1.0`，`warnings` 仅来自既有 `remote-pair` 插件，与本包无关）。
+- 安装：`plugin_manager install_bundle` → `application: applied`（bundles 记录 `dsh-super-agent@0.2.0`，`warnings` 仅来自既有 `remote-pair` 插件，与本包无关）。
 - 链路自检：
   - `GET /api/super-agent/state` → 200（真机实测 51 KB 载荷）；
   - `GET /api/super-agent/health` → `{"ok":true,"state":"ready"}`；
