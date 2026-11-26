@@ -23,6 +23,11 @@ const DEFAULTS = {
   acceptMode: 'observe',
   runner: 'auto',
   maxWorkers: 4,
+  // Local patch (2026-11-26): `agentPresets.mount()` never runs for a Session created straight
+  // through agents.create(), so an "independent preset" worker came up with no fs/pwsh tools at
+  // all. Keep the standalone session path (sessionController.create + agentPreset) as the
+  // default and only take the nested route when this is explicitly turned on.
+  nestedWorker: false,
   routerModel: '',
   workerModel: '',
   watchdogIntervalMs: 15_000,
@@ -270,7 +275,7 @@ export async function apply(ctx, rawConfig = {}) {
     const agents = ctx.get('agents')
     let route = null
     try { route = await modelFor('worker') } catch { route = null }
-    if (agents && typeof agents.create === 'function') {
+    if (config.nestedWorker === true && agents && typeof agents.create === 'function') {
       try {
         const parent = worker.parentSessionId ? agents.get?.(worker.parentSessionId) : await managerAgent()
         if (parent) {
